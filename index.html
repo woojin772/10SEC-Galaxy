@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>남우진의 10초 클릭 챌린지</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    body {
+      text-align: center;
+      font-family: sans-serif;
+      margin-top: 80px;
+      background-color: black;
+      color: white;
+    }
+
+    canvas#starCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+    }
+
+    button {
+      padding: 20px 40px;
+      font-size: 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    #score, #timer, #highScore {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+
+    #scoreHistory {
+      font-size: 18px;
+      margin-top: 30px;
+      padding: 0;
+      list-style: none;
+    }
+
+    #footer {
+      margin-top: 60px;
+      color: #ccc;
+      font-size: 15px;
+      font-style: italic;
+      opacity: 0.8;
+    }
+
+    #footer span {
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    #musicBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      background-color: #4eaaff;
+      color: white;
+      font-size: 24px;
+      border: none;
+      border-radius: 50%;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      z-index: 999;
+    }
+
+    #musicBtn:hover {
+      background-color: #007acc;
+    }
+
+    /* 🎬 인트로 */
+    #intro {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, #111 0%, #000 100%);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeIn 1s ease-out;
+    }
+
+    #intro h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+      color: #fff;
+      text-shadow: 2px 2px #000;
+    }
+
+    #intro p {
+      font-size: 20px;
+      margin-bottom: 30px;
+    }
+
+    #intro button {
+      padding: 15px 30px;
+      font-size: 20px;
+      border-radius: 10px;
+      border: none;
+      background-color: #ffcc00;
+      color: #333;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #intro button:hover {
+      background-color: #ffaa00;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body onclick="easterEgg()">
+
+  <!-- 🌌 별 배경용 캔버스 -->
+  <canvas id="starCanvas"></canvas>
+
+  <!-- 🎬 인트로 -->
+  <div id="intro">
+    <h1>🌌 10초 클릭 챌린지 🌌</h1>
+    <p>당신의 반사신경을 우주 끝까지 날려보세요!</p>
+    <button onclick="enterGame()">🎮 시작하기</button>
+  </div>
+
+  <!-- 게임 콘텐츠 -->
+  <h1>10초 클릭 챌린지</h1>
+  <p>제한 시간 안에 최대한 많이 눌러보세요!</p>
+
+  <button id="clickBtn" onclick="clickCount()" disabled>클릭!</button>
+  <p id="score">점수: 0</p>
+  <p id="highScore">최고 점수: 0</p>
+  <p id="timer">남은 시간: 10초</p>
+
+  <button onclick="startGame()">🎮 게임 시작</button>
+
+  <h2>📋 최근 플레이 기록</h2>
+  <ul id="scoreHistory"></ul>
+
+  <!-- 음악 제어 버튼 -->
+  <button id="musicBtn" onclick="toggleMusic()">🎵</button>
+
+  <!-- 배경 음악 -->
+  <audio id="bgm" preload="auto" loop>
+    <source src="https://cdn.pixabay.com/audio/2023/04/26/audio_1403dc998d.mp3" type="audio/mpeg">
+  </audio>
+
+  <div id="footer">
+    ⓒ 2025 <span onclick="alertCredits()">남우진</span> 제작 | All rights reserved.
+  </div>
+
+  <script>
+    let score = 0;
+    let timeLeft = 10;
+    let countdown;
+    let isMusicPlaying = false;
+
+    const scoreEl = document.getElementById("score");
+    const timerEl = document.getElementById("timer");
+    const clickBtn = document.getElementById("clickBtn");
+    const highScoreEl = document.getElementById("highScore");
+    const musicBtn = document.getElementById("musicBtn");
+    const bgm = document.getElementById("bgm");
+
+    let highScore = localStorage.getItem("bestScore") || 0;
+    highScoreEl.textContent = "최고 점수: " + highScore;
+
+    function clickCount() {
+      score++;
+      scoreEl.textContent = "점수: " + score;
+    }
+
+    function startGame() {
+      score = 0;
+      timeLeft = 10;
+      scoreEl.textContent = "점수: 0";
+      timerEl.textContent = "남은 시간: 10초";
+      clickBtn.disabled = false;
+
+      clearInterval(countdown);
+      countdown = setInterval(() => {
+        timeLeft--;
+        timerEl.textContent = "남은 시간: " + timeLeft + "초";
+
+        if (timeLeft === 0) {
+          clearInterval(countdown);
+          clickBtn.disabled = true;
+          timerEl.textContent = "⏰ 시간 종료!";
+          alert("게임 끝! 점수: " + score);
+
+          saveScoreRecord(score);
+
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem("bestScore", score);
+            highScoreEl.textContent = "최고 점수: " + highScore;
+            alert("🎉 최고 기록 갱신!");
+          }
+        }
+      }, 1000);
+    }
+
+    function toggleMusic() {
+      if (!isMusicPlaying) {
+        bgm.currentTime = 0;
+        bgm.volume = 0.6;
+        bgm.play().then(() => {
+          isMusicPlaying = true;
+          musicBtn.textContent = "⏸️";
+        }).catch(err => {
+          alert("🔇 음악 자동 재생이 차단되었습니다.\n버튼을 다시 눌러주세요.");
+        });
+      } else {
+        bgm.pause();
+        isMusicPlaying = false;
+        musicBtn.textContent = "🎵";
+      }
+    }
+
+    function saveScoreRecord(score) {
+      const history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
+      const now = new Date();
+      const formatted = now.toLocaleString();
+      history.unshift({ score, date: formatted });
+      if (history.length > 5) history.pop();
+      localStorage.setItem("scoreHistory", JSON.stringify(history));
+      displayScoreHistory();
+    }
+
+    function displayScoreHistory() {
+      const history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
+      const list = document.getElementById("scoreHistory");
+      list.innerHTML = "";
+      history.forEach(entry => {
+        const li = document.createElement("li");
+        li.textContent = `🕹️ ${entry.date} - 점수: ${entry.score}`;
+        list.appendChild(li);
+      });
+    }
+
+    function alertCredits() {
+      event.stopPropagation();
+      alert("이 게임은 남우진이 직접 기획하고 제작했습니다. 🚀");
+    }
+
+    function easterEgg() {
+      document.body.style.backgroundColor = "#111";
+    }
+
+    function enterGame() {
+      const intro = document.getElementById("intro");
+      intro.style.transition = "opacity 1s";
+      intro.style.opacity = 0;
+      setTimeout(() => {
+        intro.style.display = "none";
+      }, 1000);
+    }
+
+    // ⭐ 별 애니메이션 로직
+    const canvas = document.getElementById('starCanvas');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      stars = [];
+      for (let i = 0; i < 100; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 1.5 + 0.5,
+          d: Math.random() * 0.5 + 0.2
+        });
+      }
+    }
+
+    function drawStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ffffff";
+      for (let star of stars) {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      updateStars();
+      requestAnimationFrame(drawStars);
+    }
+
+    function updateStars() {
+      for (let star of stars) {
+        star.y += star.d;
+        if (star.y > canvas.height) {
+          star.y = 0;
+          star.x = Math.random() * canvas.width;
+        }
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    window.onload = function () {
+      resizeCanvas();
+      drawStars();
+      displayScoreHistory();
+    };
+  </script>
+</body>
+</html>
